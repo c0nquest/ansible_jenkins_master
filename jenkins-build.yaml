@@ -1,10 +1,10 @@
-- name: Config Vim with plugins
+- name: Build Jenkins Master
   hosts: localhost
   become: true
   become_method: sudo
   gather_facts: true
 
   tasks:
-    - name: Configure Vim using role
+    - name: Build Jenkins Master role
       import_role:
         name: jenkins-master
