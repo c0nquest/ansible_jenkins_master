@@ -1,0 +1,29 @@
+---
+# defaults file for jenkins-master
+# Based from Jnekins install instructions for LTS Centos/RHEL
+# https://www.jenkins.io/doc/book/installing/linux/#red-hat-centos
+
+jenkins_http_port: 8080 
+jenkins_url_prefix : 
+jenkins_hostname: localhost
+jenkins_home: /var/lib/jenkins
+jenkins_repo_file: /etc/yum.repos.d/jenkins.repo 
+jenkins_down_url: https://pkg.jenkins.io/redhat-stable
+jenkins_repo_key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+jenkins_user: jenkins
+jenkins_group: jenkins
+jenkins_admin_user: admin
+jenkins_admin_pass: admin
+jenkins_req_packages: 
+  - epel-release
+  - java-11-openjdk-devel
+jenkins_java_options: "-Djenkins.install.runSetupWizard=false"
+jenkins_init_file: /etc/sysconfig/jenkins
+jenkins_http_port_param: JENKINS_PORT
+jenkins_java_options_env_var: JENKINS_JAVA_OPTIONS
+jenkins_jar_location: /var/lib/jenkins/jenkins-cli.jar
+jenkins_init_changes:
+  - option: "JENKINS_ARGS"
+    value: "--prefix={{ jenkins_url_prefix }}"
+  - option: "{{ jenkins_java_options_env_var }}"
+    value: "{{ jenkins_java_options }}"

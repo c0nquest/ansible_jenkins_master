@@ -1,0 +1,9 @@
+---
+# handlers file for jenkins-master
+- name: yum-clean-metadata
+  command: yum clean metadata
+  args:
+    warn: no
+
+- name: restart jenkins
+  service: name=jenkins state=restarted

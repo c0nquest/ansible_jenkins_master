@@ -1,0 +1,17 @@
+---
+# tasks file for jenkins-master
+
+- name: Install a list of packages epel java jenkins
+  yum:
+    name:
+      - epel-release
+      - java-11-openjdk-devel
+      - jenkins
+    state: removed
+
+# Example removing a repository and cleaning up metadata cache
+- name: Remove repository (and clean up left-over metadata)
+  yum_repository:
+    name: jenkins
+    state: absent
+  notify: yum-clean-metadata
