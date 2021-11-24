@@ -2,14 +2,12 @@
 # tasks file for jenkins-master
 
 # Setup/install tasks.
-#- include_tasks: install.yml
-#  tags: install
 - name: Execute a command
   ansible.builtin.command: "false"
   debugger: on_failed
 
 
-- name: Apply tags to tasks within included file
+- name: Include install tasks
   include_tasks:
     file: install.yml
     apply:
@@ -18,16 +16,21 @@
   tags:
     - always
 
-# Setup/uninstall tasks.
-#- include_tasks: uninstall.yml
-#  tags: uninstall
-
-- name: Apply tags to tasks within included file
+- name: Include uninstall tasks
   include_tasks:
     file: uninstall.yml
     apply:
       tags:
         - uninstall
+  tags:
+    - always
+
+- name: Include node tasks
+  include_tasks:
+    file: node.yml
+    apply:
+      tags:
+        - node
   tags:
     - always
 

@@ -1,0 +1,44 @@
+{
+  "name": "test333",
+  "nodeDescription": "test 33",
+  "numExecutors": "1",
+  "remoteFS": "/var/jenkins",
+  "labelString": "Linux_node01",
+  "mode": "NORMAL",
+  "": [
+    "hudson.slaves.JNLPLauncher",
+    "hudson.slaves.RetentionStrategy$Always"
+  ],
+  "launcher": {
+    "stapler-class": "hudson.slaves.JNLPLauncher",
+    "$class": "hudson.slaves.JNLPLauncher",
+    "workDirSettings": {
+      "disabled": false,
+      "workDirPath": "",
+      "internalDir": "remoting",
+      "failIfWorkDirIsMissing": false
+    },
+    "webSocket": false,
+    "tunnel": "",
+    "vmargs": ""
+  },
+  "retentionStrategy": {
+    "stapler-class": "hudson.slaves.RetentionStrategy$Always",
+    "$class": "hudson.slaves.RetentionStrategy$Always"
+  },
+  "nodeProperties": {
+    "stapler-class-bag": "true",
+    "hudson-slaves-EnvironmentVariablesNodeProperty": {
+      "env": {
+        "key": "BUILD_ENV",
+        "value": "DEV"
+      }
+    },
+    "hudson-tools-ToolLocationNodeProperty": {
+      "locations": {
+        "key": "hudson.plugins.git.GitTool$DescriptorImpl@Default",
+        "home": "/bin/git"
+      }
+    }
+  }
+}

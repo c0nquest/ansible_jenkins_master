@@ -1,0 +1,172 @@
+---
+
+# REF: https://www.netexpertise.eu/en/devops/ansible/register-a-jenkins-slave-with-ansible.html
+# https://wiki.jenkins.io/display/JENKINS/Distributed+builds
+
+# Set the home directory to the same as the jenkins install path, this is useful when using ssh keys and cloud provider cli's
+# 
+- name: Add the jenkins node user
+  user:
+    name: "{{ jenkins_node_user }}"
+    comment: Jenkins node user
+    group: "{{ jenkins_node_group }}"
+#    home: "{{ jenkins_node_path }}"
+
+- name: Ensure jenkins_home {{ jenkins_node_path }} exists.
+  file:
+    path: "{{ jenkins_node_path }}"
+    state: directory
+    owner: "{{ jenkins_node_user }}"
+    group: "{{ jenkins_node_group }}"
+    mode: '0755'
+    follow: true
+
+- name: Download agent.jar
+  get_url:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/jnlpJars/agent.jar"
+    dest: "{{ jenkins_node_path }}/agent.jar"
+    mode: '0644'
+
+
+# Create a new crumb, this is not required if CSFR has been unticked in the console
+- name: Generate a new crumb
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/crumbIssuer/api/json"
+    body_format: json
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ jenkins_admin_pass }}"
+    status_code: 200
+    return_content: yes
+  register: data01
+
+# Generate new token using above crumb and use jsessionid in cookie
+- name: Generate Token 
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/user/{{ jenkins_admin_user }}/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken"
+    body_format: form-urlencoded
+    body:
+      newTokenName: "{{ jenkins_token_name }}"
+    method: POST
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ jenkins_admin_pass }}"
+    status_code: 200
+    return_content: yes
+    headers:
+      Cookie: "{{ data01.cookies_string }}"
+      Jenkins-Crumb: "{{ data01.json.crumb }}"
+  register: data02
+
+- name: create node on Jenkins master
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/computer/doCreateItem?name={{ jenkins_node_name }}&type=hudson.slaves.DumbSlave"
+    method: POST
+    body_format: form-urlencoded
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ data02.json.data.tokenValue }}"
+    body: "json={{ lookup('template', 'config.json.j2', convert_data=False) }}"
+    return_content: yes
+    status_code: 200, 302, 400
+    headers:
+      Cookie: "{{ data01.cookies_string }}"
+      Jenkins-Crumb: "{{ data01.json.crumb }}"
+  register: data04
+
+- name: get node page content
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/computer/{{jenkins_node_name}}/slave-agent.jnlp"
+    method: POST
+    body_format: form-urlencoded
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ data02.json.data.tokenValue }}"
+    return_content: yes
+    status_code: 200
+  register: data05
+
+# requires the following install
+# ansible-galaxy collection install community.general
+# pip3 install --upgrade lxml
+- name: get secret from xml
+  xml:
+    xmlstring: "{{data05.content}}"
+    xpath: /jnlp/application-desc/argument
+    content: text
+  register: data06
+
+- name: get node list in json
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/computer/api/json?tree=computer[displayName]"
+#    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/computer/api/xml"
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ jenkins_admin_pass }}"
+    status_code: 200
+    return_content: yes
+    headers:
+      Cookie: "{{ data01.cookies_string }}"
+      Jenkins-Crumb: "{{ data01.json.crumb }}"
+  register: data07
+
+- name: Copy jenkins-node default file template
+  template:
+    src: jenkins-node-default.j2
+    dest: "/etc/default/{{ jenkins_node_user }}"
+    owner: "{{ jenkins_node_user }}"
+    group: "{{ jenkins_node_group }}"
+    mode: 0600
+  vars:
+    jenkins_node_secret: "{{data06.matches[0].argument}}"
+  register: jenkins_config
+
+
+# For security purposes, remove the newly created token
+- name: Delete Token
+  uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/user/{{ jenkins_admin_user }}/descriptorByName/jenkins.security.ApiTokenProperty/revoke"
+    body_format: form-urlencoded
+    body:
+      tokenUuid: "{{ data02.json.data.tokenUuid }}"
+    method: POST
+    force_basic_auth: yes
+    user: "{{ jenkins_admin_user }}"
+    password: "{{ jenkins_admin_pass }}"
+    status_code: 200
+    return_content: yes
+    headers:
+      Cookie: "{{ data01.cookies_string }}"
+      Jenkins-Crumb: "{{ data01.json.crumb }}"
+  register: data03
+
+
+- name: Print returned json dictionary
+  debug:
+    var: data01.json
+
+- name: Print certain element
+  debug:
+    var: data02.json
+
+- name: Print certain element 1
+  debug:
+    var: data03
+
+- name: Print certain element 1
+  debug:
+    var: data04
+
+- name: Print certain element 1
+  debug:
+    var: data05
+
+- name: Print certain element 1
+  debug:
+    var: data06
+
+- name: Print certain element 1
+  debug:
+    var: data07  | upper
+  when: "'test044' not in data07.content | lower"
+

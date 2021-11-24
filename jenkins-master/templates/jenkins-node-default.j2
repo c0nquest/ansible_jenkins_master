@@ -1,0 +1,8 @@
+JENKINS_HOME="{{ jenkins_node_path }}"
+JENKINS_USER="{{ jenkins_node_user }}"
+JENKINS_WORKDIR=$(eval echo "~$JENKINS_USER")
+JENKINS_URL="http://{{ jenkins_hostname }}:{{ jenkins_http_port }}"
+JENKINS_JNLP="$JENKINS_URL/computer/{{jenkins_node_name}}/slave-agent.jnlp"
+JENKINS_NODENAME=$(hostname)
+JENKINS_SECRET={{ jenkins_node_secret }}
+JAVA_ARGS=""

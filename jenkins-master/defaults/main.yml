@@ -3,6 +3,17 @@
 # Based from Jnekins install instructions for LTS Centos/RHEL
 # https://www.jenkins.io/doc/book/installing/linux/#red-hat-centos
 
+# Jenkins Node variables
+jenkins_node_name: test04
+jenkins_node_user: jenkins
+jenkins_node_group: jenkins
+jenkins_node_label: "linux_node node01"
+jenkins_node_numofexec: 2
+jenkins_node_desc: "New node {{ jenkins_node_name }}"
+jenkins_node_path: /opt/jenkins
+jenkins_node_buildenv: DEV
+
+# Jenkins Master variables
 jenkins_http_port: 8080 
 jenkins_url_prefix : 
 jenkins_hostname: localhost
@@ -14,6 +25,7 @@ jenkins_user: jenkins
 jenkins_group: jenkins
 jenkins_admin_user: admin
 jenkins_admin_pass: admin
+jenkins_token_name: temptoken
 jenkins_req_packages: 
   - epel-release
   - java-11-openjdk-devel
