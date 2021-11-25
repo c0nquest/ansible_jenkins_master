@@ -113,13 +113,23 @@
 - name: Copy jenkins-node default file template
   template:
     src: jenkins-node-default.j2
-    dest: "/etc/default/{{ jenkins_node_user }}"
+    dest: "/etc/sysconfig/jenkins-node"
     owner: "{{ jenkins_node_user }}"
     group: "{{ jenkins_node_group }}"
     mode: 0600
   vars:
     jenkins_node_secret: "{{data06.matches[0].argument}}"
   register: jenkins_config
+
+- name: Copy jenkins-node init file template
+  template:
+    src: jenkins-node-init.j2
+    dest: "/etc/init.d/jenkins-node"
+    owner: "{{ jenkins_node_user }}"
+    group: "{{ jenkins_node_group }}"
+    mode: 0744
+  register: jenkins_init
+
 
 
 # For security purposes, remove the newly created token

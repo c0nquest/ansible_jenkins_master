@@ -12,6 +12,7 @@ jenkins_node_numofexec: 2
 jenkins_node_desc: "New node {{ jenkins_node_name }}"
 jenkins_node_path: /opt/jenkins
 jenkins_node_buildenv: DEV
+jenkins_node_jnlp: 5555
 
 # Jenkins Master variables
 jenkins_http_port: 8080 

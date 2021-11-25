@@ -82,6 +82,16 @@
     mode: 0775
   register: jenkins_users
 
+- name: configure jnlp port
+  template:
+    src: jenkins-jnlp.groovy.j2
+    dest: "{{ jenkins_home }}/init.groovy.d/jenkins-jnlp.groovy"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: 0775
+  register: jenkins_users
+
+
 # Make sure Jenkins starts, then configure Jenkins.
 - name: Ensure Jenkins is started and runs on startup.
   service: name=jenkins state=started enabled=yes
@@ -103,3 +113,10 @@
   file:
     path: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
     state: absent
+
+# Remove the script to set jnlp port
+- name: Remove Jenkins jnlp scripts after first startup.
+  file:
+    path: "{{ jenkins_home }}/init.groovy.d/jenkins-jnlp.groovy"
+    state: absent
+
