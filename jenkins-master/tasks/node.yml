@@ -1,5 +1,4 @@
 ---
-
 # REF: https://www.netexpertise.eu/en/devops/ansible/register-a-jenkins-slave-with-ansible.html
 # https://wiki.jenkins.io/display/JENKINS/Distributed+builds
 
@@ -10,7 +9,7 @@
     name: "{{ jenkins_node_user }}"
     comment: Jenkins node user
     group: "{{ jenkins_node_group }}"
-#    home: "{{ jenkins_node_path }}"
+    home: "{{ jenkins_node_path }}"
 
 - name: Ensure jenkins_home {{ jenkins_node_path }} exists.
   file:
@@ -27,7 +26,6 @@
     dest: "{{ jenkins_node_path }}/agent.jar"
     mode: '0644'
 
-
 # Create a new crumb, this is not required if CSFR has been unticked in the console
 - name: Generate a new crumb
   uri:
@@ -38,7 +36,7 @@
     password: "{{ jenkins_admin_pass }}"
     status_code: 200
     return_content: yes
-  register: data01
+  register: crumbdata
 
 # Generate new token using above crumb and use jsessionid in cookie
 - name: Generate Token 
@@ -54,9 +52,9 @@
     status_code: 200
     return_content: yes
     headers:
-      Cookie: "{{ data01.cookies_string }}"
-      Jenkins-Crumb: "{{ data01.json.crumb }}"
-  register: data02
+      Cookie: "{{ crumbdata.cookies_string }}"
+      Jenkins-Crumb: "{{ crumbdata.json.crumb }}"
+  register: tokendata
 
 - name: create node on Jenkins master
   uri:
@@ -65,14 +63,14 @@
     body_format: form-urlencoded
     force_basic_auth: yes
     user: "{{ jenkins_admin_user }}"
-    password: "{{ data02.json.data.tokenValue }}"
+    password: "{{ tokendata.json.data.tokenValue }}"
     body: "json={{ lookup('template', 'config.json.j2', convert_data=False) }}"
     return_content: yes
     status_code: 200, 302, 400
     headers:
-      Cookie: "{{ data01.cookies_string }}"
-      Jenkins-Crumb: "{{ data01.json.crumb }}"
-  register: data04
+      Cookie: "{{ crumbdata.cookies_string }}"
+      Jenkins-Crumb: "{{ crumbdata.json.crumb }}"
+  register: nodedata
 
 - name: get node page content
   uri:
@@ -81,20 +79,26 @@
     body_format: form-urlencoded
     force_basic_auth: yes
     user: "{{ jenkins_admin_user }}"
-    password: "{{ data02.json.data.tokenValue }}"
+    password: "{{ tokendata.json.data.tokenValue }}"
     return_content: yes
     status_code: 200
-  register: data05
+  register: agentdata
 
 # requires the following install
 # ansible-galaxy collection install community.general
 # pip3 install --upgrade lxml
+#- name: get secret from xml
+#  xml:
+#    xmlstring: "{{agentdata.content}}"
+#    xpath: /jnlp/application-desc/argument
+#    content: text
+#  register: data06
+
 - name: get secret from xml
-  xml:
-    xmlstring: "{{data05.content}}"
-    xpath: /jnlp/application-desc/argument
-    content: text
-  register: data06
+  shell: echo "{{agentdata.content}}" | awk -F"argument>" '{print $2}' | cut -d'<' -f1
+  register: xmlout
+  args:
+    creates: /etc/sysconfig/jenkins-node
 
 - name: get node list in json
   uri:
@@ -106,10 +110,13 @@
     status_code: 200
     return_content: yes
     headers:
-      Cookie: "{{ data01.cookies_string }}"
-      Jenkins-Crumb: "{{ data01.json.crumb }}"
-  register: data07
+      Cookie: "{{ crumbdata.cookies_string }}"
+      Jenkins-Crumb: "{{ crumbdata.json.crumb }}"
+  register: nodelistdata
 
+
+# NEED TO CHANGE data06
+# jenkins_node_secret: "{{data06.matches[0].argument}}"
 - name: Copy jenkins-node default file template
   template:
     src: jenkins-node-default.j2
@@ -118,7 +125,7 @@
     group: "{{ jenkins_node_group }}"
     mode: 0600
   vars:
-    jenkins_node_secret: "{{data06.matches[0].argument}}"
+    jenkins_node_secret: "{{ xmlout.stdout }}"
   register: jenkins_config
 
 - name: Copy jenkins-node init file template
@@ -138,7 +145,7 @@
     url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}/user/{{ jenkins_admin_user }}/descriptorByName/jenkins.security.ApiTokenProperty/revoke"
     body_format: form-urlencoded
     body:
-      tokenUuid: "{{ data02.json.data.tokenUuid }}"
+      tokenUuid: "{{ tokendata.json.data.tokenUuid }}"
     method: POST
     force_basic_auth: yes
     user: "{{ jenkins_admin_user }}"
@@ -146,37 +153,42 @@
     status_code: 200
     return_content: yes
     headers:
-      Cookie: "{{ data01.cookies_string }}"
-      Jenkins-Crumb: "{{ data01.json.crumb }}"
-  register: data03
+      Cookie: "{{ crumbdata.cookies_string }}"
+      Jenkins-Crumb: "{{ crumbdata.json.crumb }}"
+  register: revokedata
 
+- name: Start service jenkins-node, if not started
+  service: 
+    name: jenkins-node
+    state: started
+    enabled: yes
 
 - name: Print returned json dictionary
   debug:
-    var: data01.json
+    var: crumbdata.json
 
 - name: Print certain element
   debug:
-    var: data02.json
+    var: tokendata.json
 
 - name: Print certain element 1
   debug:
-    var: data03
+    var: revokedata
 
 - name: Print certain element 1
   debug:
-    var: data04
+    var: nodedata
 
 - name: Print certain element 1
   debug:
-    var: data05
+    var: agentdata
 
 - name: Print certain element 1
   debug:
-    var: data06
+    var: xmlout
 
 - name: Print certain element 1
   debug:
-    var: data07  | upper
-  when: "'test044' not in data07.content | lower"
+    var: nodelistdata  | upper
+  when: "'test044' not in nodelistdata.content | lower"
 

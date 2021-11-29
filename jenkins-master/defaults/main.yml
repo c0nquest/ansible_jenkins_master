@@ -17,7 +17,7 @@ jenkins_node_jnlp: 5555
 # Jenkins Master variables
 jenkins_http_port: 8080 
 jenkins_url_prefix : 
-jenkins_hostname: localhost
+jenkins_hostname: 192.168.0.49
 jenkins_home: /var/lib/jenkins
 jenkins_repo_file: /etc/yum.repos.d/jenkins.repo 
 jenkins_down_url: https://pkg.jenkins.io/redhat-stable
